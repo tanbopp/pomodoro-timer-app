@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'ms-blue': '#0078D4',
+                        'ms-grey': '#4C4C4C'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .no-select {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+        
+        input:not([readonly]) {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+            -webkit-touch-callout: default;
+        }
+
+        /* Add SF Pro font styles */
+        @font-face {
+            font-family: 'SF Pro Text';
+            src: local('SF Pro Text');
+        }
+    </style>
+</head>
+<body class="h-screen bg-white font-['SF_Pro_Text'] no-select overflow-hidden flex flex-col">
+    <div class="w-full h-[80px] sm:h-[100px] flex items-center justify-center gap-x-2">
+        <button class="px-3 sm:px-4 py-1 bg-blue-500 rounded-lg text-white cursor-pointer">Stopwatch</button>
+        <button onclick="window.location.href='index.html'" class="px-3 sm:px-4 py-1 bg-transparent hover:bg-black/5 active:bg-black/10 rounded-lg text-neutral-500 cursor-default">Podomoro</button>
+    </div>
+    <div class="flex-1 max-w-2xl mx-auto px-4 w-full overflow-hidden flex flex-col">
+        <div class="text-center">
+            <h1 class="text-4xl sm:text-5xl font-semibold text-neutral-800 mb-6 sm:mb-8">Stopwatch</h1>
+            <div class="text-7xl sm:text-9xl mb-6 sm:mb-8 font-semibold text-neutral-800 tracking-tight stopwatch-display">00:00.00</div>
+            <div class="flex justify-center gap-2 sm:gap-4 mb-8">
+                <button id="startStop" class="p-[6px] min-w-20 sm:min-w-28 bg-blue-500 hover:bg-blue-600 rounded-md cursor-default text-white ring-1 ring-neutral-200">Start</button>
+                <button id="lap" class="p-[6px] min-w-20 sm:min-w-28 bg-neutral-100 text-neutral-400 rounded-md cursor-default ring-1 ring-neutral-200" disabled>Lap</button>
+                <button id="reset" class="p-[6px] min-w-20 sm:min-w-28 bg-neutral-100 text-neutral-400 rounded-md cursor-default ring-1 ring-neutral-200" disabled>Reset</button>
+            </div>
+        </div>
+        <div class="flex-1 overflow-hidden">
+            <div class="laps-container h-full overflow-y-auto pb-4">
+                <ul id="lapsList" class="space-y-2"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let centiseconds = 0;
+        let interval;
+        let running = false;
+        let laps = [];
+        
+        const display = document.querySelector('.stopwatch-display');
+        const startStopBtn = document.getElementById('startStop');
+        const lapBtn = document.getElementById('lap');
+        const resetBtn = document.getElementById('reset');
+        const lapsList = document.getElementById('lapsList');
+
+        function formatTime(cs) {
+            const minutes = Math.floor(cs / 6000);
+            const seconds = Math.floor((cs % 6000) / 100);
+            const centis = cs % 100;
+            return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${centis.toString().padStart(2, '0')}`;
+        }
+
+        function updateDisplay() {
+            display.textContent = formatTime(centiseconds);
+        }
+
+        function toggleStartStop() {
+            if (!running) {
+                interval = setInterval(() => {
+                    centiseconds++;
+                    updateDisplay();
+                }, 10);
+                startStopBtn.textContent = 'Stop';
+                startStopBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                startStopBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+                lapBtn.disabled = false;
+                lapBtn.classList.remove('bg-neutral-100', 'text-neutral-400');
+                lapBtn.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600');
+            } else {
+                clearInterval(interval);
+                startStopBtn.textContent = 'Start';
+                startStopBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                startStopBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+                lapBtn.disabled = true;
+                lapBtn.classList.remove('bg-blue-500', 'text-white', 'hover:bg-blue-600');
+                lapBtn.classList.add('bg-neutral-100', 'text-neutral-400');
+            }
+            running = !running;
+            resetBtn.disabled = running;
+            resetBtn.classList.toggle('bg-neutral-100', running);
+            resetBtn.classList.toggle('text-neutral-400', running);
+            resetBtn.classList.toggle('bg-blue-500', !running && centiseconds > 0);
+            resetBtn.classList.toggle('text-white', !running && centiseconds > 0);
+            resetBtn.classList.toggle('hover:bg-blue-600', !running && centiseconds > 0);
+        }
+
+        function addLap() {
+            const lapTime = centiseconds;
+            const prevLap = laps[laps.length - 1] || 0;
+            const lapDiff = lapTime - prevLap;
+            laps.push(lapTime);
+
+            // Create new lap element
+            const li = document.createElement('li');
+            li.className = 'flex justify-between px-4 py-2 bg-gray-50 rounded-lg';
+            li.innerHTML = `
+                <span class="lap-text">Lap ${laps.length}</span>
+                <span class="lap-text">${formatTime(lapDiff)}</span>
+                <span class="lap-text">${formatTime(lapTime)}</span>
+            `;
+            lapsList.insertBefore(li, lapsList.firstChild);
+
+            // Get all lap differences
+            const lapDiffs = [];
+            for (let i = 0; i < laps.length; i++) {
+                const diff = i === 0 ? laps[0] : laps[i] - laps[i-1];
+                lapDiffs.push(diff);
+            }
+
+            // Find fastest and slowest laps
+            const minDiff = Math.min(...lapDiffs);
+            const maxDiff = Math.max(...lapDiffs);
+
+            // Update colors for all laps
+            const lapElements = lapsList.querySelectorAll('li');
+            lapElements.forEach((el, index) => {
+                const reversedIndex = lapElements.length - 1 - index;
+                const currentDiff = lapDiffs[reversedIndex];
+                const lapTextElements = el.querySelectorAll('.lap-text');
+                
+                // Reset classes first
+                lapTextElements.forEach(element => {
+                    element.classList.remove('text-green-500', 'text-red-500', 'text-neutral-800');
+                });
+                
+                if (currentDiff === minDiff) {
+                    lapTextElements.forEach(element => element.classList.add('text-green-500'));
+                } else if (currentDiff === maxDiff) {
+                    lapTextElements.forEach(element => element.classList.add('text-red-500'));
+                } else {
+                    lapTextElements.forEach(element => element.classList.add('text-neutral-800'));
+                }
+            });
+        }
+
+        function reset() {
+            centiseconds = 0;
+            laps = [];
+            updateDisplay();
+            lapsList.innerHTML = '';
+            resetBtn.disabled = true;
+            resetBtn.classList.add('bg-neutral-100', 'text-neutral-400');
+            resetBtn.classList.remove('bg-blue-500', 'text-white', 'hover:bg-blue-600');
+        }
+
+        startStopBtn.addEventListener('click', toggleStartStop);
+        lapBtn.addEventListener('click', addLap);
+        resetBtn.addEventListener('click', reset);
+    </script>
+</body>
+</html>

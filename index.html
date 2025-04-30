@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'ms-blue': '#0078D4',
+                        'ms-grey': '#4C4C4C'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .no-select {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+        
+        input:not([readonly]) {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+            -webkit-touch-callout: default;
+        }
+
+        /* Add SF Pro font styles */
+        @font-face {
+            font-family: 'SF Pro Text';
+            src: local('SF Pro Text');
+        }
+    </style>
+</head>
+<body class="h-screen bg-white font-['SF_Pro_Text'] no-select overflow-hidden">
+    <div class="w-full h-[80px] sm:h-[100px] flex items-center justify-center gap-x-2">
+        <button onclick="window.location.href='stopwatch.html'" class="px-3 sm:px-4 py-1 bg-transparent hover:bg-black/5 active:bg-black/10 rounded-lg text-neutral-500 cursor-default">Stopwatch</button>
+        <button class="px-3 sm:px-4 py-1 bg-blue-500 rounded-lg text-white cursor-default">Podomoro</button>
+    </div>
+    <div class="flex-1 max-w-2xl mx-auto px-4 w-full overflow-hidden flex flex-col">
+        <div class="text-center">
+            <h1 class="text-4xl sm:text-5xl font-semibold text-neutral-800 mb-6 sm:mb-8">Timer</h1>
+            <div class="text-xl sm:text-2xl font-medium text-slate-800 mb-2 timer-name">Work Time</div>
+            <div class="text-7xl sm:text-9xl mb-2 font-semibold text-neutral-800 timer tracking-tight" data-name="Work Timer">25:00</div>
+            <div class="flex justify-center gap-2 sm:gap-4 mb-8">
+                <button id="start" class="p-[6px] min-w-20 sm:min-w-28 bg-blue-500 hover:bg-blue-600 rounded-md cursor-default text-white ring-1 ring-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-400">Start</button>
+                <button id="pause" class="p-[6px] min-w-20 sm:min-w-28 bg-blue-500 hover:bg-blue-600 rounded-md cursor-default text-white ring-1 ring-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-400" disabled>Pause</button>
+                <button id="reset" class="p-[6px] min-w-20 sm:min-w-28 bg-blue-500 hover:bg-blue-600 rounded-md cursor-default text-white ring-1 ring-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-400" disabled>Reset</button>
+            </div>
+            <button id="settingsBtn" class="text-slate-800 text-3xl cursor-default w-[32px] rounded h-[32px] flex justify-center items-center hover:bg-neutral-200 mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="hidden fixed inset-0 bg-white/50 flex items-center justify-center z-50 text-slate-800">
+            <div class="bg-neutral-100 text-slate-800 p-6 rounded-lg w-96 relative shadow-lg border border-neutral-200">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-semibold">Edit timer</h3>
+                    <button id="closeSettings" class="text-slate-800 text-3xl cursor-default w-[32px] rounded h-[32px] flex justify-center items-center hover:bg-neutral-200 hidden">&times;</button>
+                </div>
+                
+                <!-- Timer Name Input -->
+                <div class="mb-4">
+                    <input type="text" id="timerName" placeholder=" e.g. Work Timer" class="w-full p-2 bg-white hover:bg-neutral-50 focus:bg-white focus:border focus:border-neutral-200 border border-b-2 border-neutral-200 focus:border-b-2 focus:border-b-blue-500 rounded-md outline-none cursor-text">
+                </div>
+
+                <!-- Main Timer -->
+                <div class="flex justify-center gap-2 mb-4 items-center">
+                    <div class="text-center w-full">
+                        <button class="text-slate-800 hover:text-white mb-2 w-[32px] justify flex justify-center items-center hover:bg-neutral-200 py-3 rounded cursor-default mx-auto" onclick="adjustTime('hours', 1)"><img src="arrow-up.svg" class="h-[10px]"></button>
+                        <input type="text" id="hours" value="00" readonly class="w-full bg-neutral-300 font-semibold text-center text-neutral-800 py-3 text-4xl tracking-tight border-b border-[#4C4C4C] outline-none rounded focus:border-blue-500 opacity-100 overflow-hidden leading-none cursor-default pointer-events-none" onfocus="this.blur()" tabindex="-1">
+                        <button class="text-slate-800 hover:text-white mt-2 w-[32px] justify flex justify-center items-center hover:bg-neutral-200 py-3 rounded cursor-default mx-auto" onclick="adjustTime('hours', -1)"><img src="arrow-up.svg" class="h-[10px] rotate-180"></button>
+                    </div>
+                    <div class="text-3xl pb-2 opacity-60 font-extrabold">:</div>
+                    <div class="text-center w-full">
+                        <button class="text-slate-800 hover:text-white mb-2 w-[32px] justify flex justify-center items-center hover:bg-neutral-200 py-3 rounded cursor-default mx-auto" onclick="adjustTime('minutes', 1)"><img src="arrow-up.svg" class="h-[10px]"></button>
+                        <input type="text" id="minutes" value="25" readonly class="w-full bg-neutral-300 font-semibold text-center text-neutral-800 py-3 text-4xl tracking-tight border-b border-[#4C4C4C] outline-none rounded focus:border-blue-500 opacity-50 overflow-hidden leading-none cursor-default pointer-events-none">
+                        <button class="text-slate-800 hover:text-white mt-2 w-[32px] justify flex justify-center items-center hover:bg-neutral-200 py-3 rounded cursor-default mx-auto" onclick="adjustTime('minutes', -1)"><img src="arrow-up.svg" class="h-[10px] rotate-180"></button>
+                    </div>
+                    <div class="text-3xl pb-2 opacity-60 font-extrabold">:</div>
+                    <div class="text-center w-full">
+                        <button class="text-slate-800 hover:text-white mb-2 w-[32px] justify flex justify-center items-center hover:bg-neutral-200 py-3 rounded cursor-default mx-auto" onclick="adjustTime('seconds', 1)"><img src="arrow-up.svg" class="h-[10px]"></button>
+                        <input type="text" id="seconds" value="00" readonly class="w-full bg-neutral-300 font-semibold text-center text-neutral-800 py-3 text-4xl tracking-tight border-b border-[#4C4C4C] outline-none rounded focus:border-blue-500 opacity-50 overflow-hidden leading-none cursor-default pointer-events-none">
+                        <button class="text-gray-400 hover:text-white mt-2 w-[32px] justify flex justify-center items-center hover:bg-neutral-200 py-3 rounded cursor-default mx-auto" onclick="adjustTime('seconds', -1)"><img src="arrow-up.svg" class="h-[10px] rotate-180"></button>
+                    </div>
+                </div>
+
+                <!-- Break Timer Toggle -->
+                <div class="flex items-center justify-between mb-4 pt-2 border-t border-neutral-200">
+                    <label class="text-sm font-medium">Add break timer</label>
+                    <button id="breakToggle" class="w-12 h-6 bg-neutral-300 hover:bg-neutral-400 rounded-full p-1 cursor-default transition-colors" onclick="toggleBreak()">
+                        <div class="w-4 h-4 bg-white rounded-full transform transition-transform"></div>
+                    </button>
+                </div>
+
+                <!-- Break Timer Input (Hidden by default) -->
+                <div id="breakSettings" class="hidden mb-4 pb-2 border-b border-neutral-200">
+                    <div class="flex gap-2 items-center justify-center">
+                        <div class="text-center w-1/2">
+                            <button class="text-slate-800 hover:text-white mb-2 w-[32px] justify flex justify-center items-center hover:bg-neutral-200 py-3 rounded cursor-default mx-auto" onclick="adjustBreakTime(1)"><img src="arrow-up.svg" class="h-[10px]"></button>
+                            <input type="text" id="breakMinutes" value="05" readonly class="w-full bg-neutral-300 font-semibold text-center text-neutral-800 py-3 text-4xl tracking-tight border-b border-[#4C4C4C] outline-none rounded focus:border-blue-500 opacity-50 overflow-hidden leading-none cursor-default pointer-events-none" onfocus="this.blur()" tabindex="-1">
+                            <button class="text-slate-800 hover:text-white mt-2 w-[32px] justify flex justify-center items-center hover:bg-neutral-200 py-3 rounded cursor-default mx-auto" onclick="adjustBreakTime(-1)"><img src="arrow-up.svg" class="h-[10px] rotate-180"></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <button id="saveSettings" class="w-full p-[6px] bg-blue-500 hover:bg-blue-600 rounded-md cursor-default text-white border border-b-2 border-black/5">Save</button>
+                    <button id="cancelSettings" class="w-full p-[6px] bg-white hover:bg-white/80 rounded-md cursor-default text-black border border-b-2 border-black/5">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="h-full flex flex-col overflow-hidden">
+            <h2 class="text-xl sm:text-2xl font-semibold text-slate-800 mb-4">Tasks</h2>
+            <form id="todoForm" class="mb-4">
+                <input type="text" class="w-full p-2 bg-white hover:bg-neutral-50 focus:bg-white focus:border focus:border-neutral-200 border border-b-2 border-neutral-200 focus:border-b-2 focus:border-b-blue-500 rounded-md outline-none todo-input cursor-text font-thin text-base appearance-none" placeholder=" Add a task">
+            </form>
+            <div class="flex-1 overflow-y-auto">
+                <ul class="space-y-2 todo-list pb-4"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Timer variables
+        let timeLeft = 25 * 60;
+        let timerId = null;
+        let isBreak = false;
+        let hasBreak = false;
+
+        // DOM elements
+        const timerDisplay = document.querySelector('.timer');
+        const startButton = document.getElementById('start');
+        const pauseButton = document.getElementById('pause');
+        const resetButton = document.getElementById('reset');
+        const settingsModal = document.getElementById('settingsModal');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const closeSettings = document.getElementById('closeSettings');
+        const saveSettings = document.getElementById('saveSettings');
+        const cancelSettings = document.getElementById('cancelSettings');
+        const hoursInput = document.getElementById('hours');
+        const minutesInput = document.getElementById('minutes');
+        const secondsInput = document.getElementById('seconds');
+        const todoInput = document.querySelector('.todo-input');
+        const todoList = document.querySelector('.todo-list');
+        const breakToggle = document.getElementById('breakToggle');
+        const breakSettings = document.getElementById('breakSettings');
+        const timerNameInput = document.getElementById('timerName');
+        const breakMinutesInput = document.getElementById('breakMinutes');
+
+        // Settings Modal Functions
+        function showModal() {
+            const totalMinutes = Math.floor(timeLeft / 60);
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            const seconds = timeLeft % 60;
+            
+            hoursInput.value = hours.toString().padStart(2, '0');
+            minutesInput.value = minutes.toString().padStart(2, '0');
+            secondsInput.value = seconds.toString().padStart(2, '0');
+            
+            document.querySelectorAll('#hours, #minutes, #seconds').forEach(el => {
+                el.classList.remove('opacity-100');
+                el.classList.add('opacity-50');
+            });
+
+            document.getElementById('hours').classList.remove('opacity-50');
+            document.getElementById('hours').classList.add('opacity-100');
+
+            timerNameInput.value = timerDisplay.dataset.name || 'Work Timer';
+            breakMinutesInput.value = timerDisplay.dataset.breakMinutes || '05';
+            
+            // Set initial hasBreak state
+            hasBreak = timerDisplay.dataset.breakMinutes !== undefined;
+            
+            // Update toggle and settings visibility
+            breakToggle.classList.toggle('bg-blue-500', hasBreak);
+            breakToggle.classList.toggle('bg-neutral-300', !hasBreak);
+            breakToggle.querySelector('div').style.transform = hasBreak ? 'translateX(24px)' : 'translateX(0)';
+            breakSettings.classList.toggle('hidden', !hasBreak);
+            
+            settingsModal.classList.remove('hidden');
+        }
+
+        function hideModal() {
+            settingsModal.classList.add('hidden');
+        }
+
+        function adjustTime(field, change) {
+            const input = document.getElementById(field);
+            let value = parseInt(input.value);
+            
+            if (field === 'hours') {
+                value = (value + change + 24) % 24;
+            } else {
+                value = (value + change + 60) % 60;
+            }
+            
+            input.value = value.toString().padStart(2, '0');
+
+            // Reset semua input ke opacity 70
+            document.querySelectorAll('#hours, #minutes, #seconds').forEach(el => {
+                el.classList.remove('opacity-100');
+                el.classList.add('opacity-50');
+            });
+
+            // Set active input ke opacity 100
+            input.classList.remove('opacity-50');
+            input.classList.add('opacity-100');
+        }
+
+        function toggleBreak() {
+            hasBreak = !hasBreak;
+            
+            // Fix: Update the toggle state and appearance
+            if (hasBreak) {
+                breakToggle.classList.add('bg-blue-500');
+                breakToggle.classList.remove('bg-neutral-300');
+                breakToggle.querySelector('div').style.transform = 'translateX(24px)';
+                breakSettings.classList.remove('hidden');
+                breakMinutesInput.classList.remove('opacity-50');
+                breakMinutesInput.classList.add('opacity-100');
+            } else {
+                breakToggle.classList.remove('bg-blue-500');
+                breakToggle.classList.add('bg-neutral-300');
+                breakToggle.querySelector('div').style.transform = 'translateX(0)';
+                breakSettings.classList.add('hidden');
+                breakMinutesInput.classList.add('opacity-50');
+                breakMinutesInput.classList.remove('opacity-100');
+            }
+        }
+
+        function adjustBreakTime(change) {
+            let value = parseInt(breakMinutesInput.value);
+            value = (value + change + 60) % 60;
+            if (value === 0) value = 1; // Minimum 1 minute
+            breakMinutesInput.value = value.toString().padStart(2, '0');
+            
+            breakMinutesInput.classList.remove('opacity-50');
+            breakMinutesInput.classList.add('opacity-100');
+        }
+
+        // Modal Event Listeners
+        settingsBtn.addEventListener('click', showModal);
+        closeSettings.addEventListener('click', hideModal);
+        cancelSettings.addEventListener('click', hideModal);
+        
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) hideModal();
+        });
+
+        saveSettings.addEventListener('click', () => {
+            const hours = parseInt(hoursInput.value || '0') * 3600;
+            const minutes = parseInt(minutesInput.value || '0') * 60;
+            const seconds = parseInt(secondsInput.value || '0');
+            timeLeft = hours + minutes + seconds;
+            timerDisplay.dataset.name = timerNameInput.value;
+            
+            // Update break timer settings
+            if (hasBreak) {
+                timerDisplay.dataset.breakMinutes = breakMinutesInput.value;
+            } else {
+                delete timerDisplay.dataset.breakMinutes;
+            }
+            
+            updateDisplay();
+            updateButtonStates(false);
+            hideModal();
+        });
+
+        // Update display function
+        function updateDisplay() {
+            // Pastikan timeLeft tidak negatif
+            timeLeft = Math.max(0, timeLeft);
+            
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            const time = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            timerDisplay.textContent = time;
+
+            // Update timer name
+            const timerName = document.querySelector('.timer-name');
+            if (isBreak) {
+                timerName.textContent = 'Break Time';
+                document.querySelector('.break-info').classList.add('hidden');
+            } else {
+                timerName.textContent = timerDisplay.dataset.name || 'Work Time';
+                // Tampilkan break info jika memiliki break timer
+                if (hasBreak) {
+                    const breakInfo = document.querySelector('.break-info');
+                    const breakAt = new Date();
+                    breakAt.setSeconds(breakAt.getSeconds() + timeLeft);
+                    const breakTime = breakAt.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: false 
+                    });
+                    breakInfo.querySelector('span').textContent = breakTime;
+                    breakInfo.classList.remove('hidden');
+                }
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            updateDisplay();
+            updateButtonStates(false);
+        });
+
+        // Update button states
+        function updateButtonStates(isRunning) {
+            startButton.disabled = isRunning;
+            startButton.classList.toggle('opacity-100', isRunning);
+            
+            pauseButton.disabled = !isRunning;
+            pauseButton.classList.toggle('opacity-100', !isRunning);
+            
+            // Reset enabled ketika timer tidak running dan timeLeft tidak sama dengan initial time
+            const initialTime = parseInt(minutesInput.value) * 60 + parseInt(secondsInput.value);
+            resetButton.disabled = isRunning || timeLeft === initialTime;
+            resetButton.classList.toggle('opacity-100', isRunning || timeLeft === initialTime);
+        }
+
+        function startTimer() {
+            if (timerId === null) {
+                timerId = setInterval(() => {
+                    timeLeft--;
+                    if (timeLeft < 0) {
+                        // Ketika timer habis
+                        const notification = new Notification(
+                            isBreak ? 'Break Time Over!' : 'Work Time Over!',
+                            {
+                                body: isBreak ? 'Time to get back to work!' : 'Time for a break!',
+                                icon: 'https://icons8.com/icon/43JONK4HH0vE/timer'
+                            }
+                        );
+
+                        isBreak = !isBreak;
+                        
+                        // Reset timer berdasarkan mode
+                        if (isBreak && hasBreak) {
+                            // Jika berganti ke mode break
+                            timeLeft = parseInt(breakMinutesInput.value) * 60;
+                        } else {
+                            // Jika berganti ke mode work, ambil waktu dari settings
+                            const workHours = parseInt(hoursInput.value || '0') * 3600;
+                            const workMinutes = parseInt(minutesInput.value || '0') * 60;
+                            const workSeconds = parseInt(secondsInput.value || '0');
+                            timeLeft = workHours + workMinutes + workSeconds;
+                            
+                            // Jika tidak ada break, pastikan tetap di mode work
+                            if (!hasBreak) {
+                                isBreak = false;
+                            }
+                        }
+                    }
+                    updateDisplay();
+                    updateButtonStates(true);
+                }, 1000);
+                updateButtonStates(true);
+            }
+        }
+
+        if (Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        function pauseTimer() {
+            if (timerId !== null) {
+                clearInterval(timerId);
+                timerId = null;
+                updateButtonStates(false);
+            }
+        }
+
+        function resetTimer() {
+            if (timerId === null) {
+                isBreak = false; // Reset ke work mode
+                timeLeft = parseInt(minutesInput.value) * 60;
+                updateDisplay();
+                updateButtonStates(false);
+            }
+        }
+
+        startButton.addEventListener('click', startTimer);
+        pauseButton.addEventListener('click', pauseTimer);
+        resetButton.addEventListener('click', resetTimer);
+
+        function addTodo(e) {
+            e.preventDefault();
+            const todoValue = todoInput.value.trim();
+            
+            if (todoValue) {
+                const todoItem = document.createElement('li');
+                todoItem.className = 'flex items-center px-4 py-2 pr2 bg-gray-50 mb-2 rounded-lg hover:bg-gray-100 w-full overflow-hidden';
+                todoItem.innerHTML = `
+                    <input type="checkbox" class="mr-4 w-5 h-5 cursor-default">
+                    <span class="flex-1 text-base w-full whitespace-nowrap text-ellipsis todo-text overflow-hidden">${todoValue}</span>
+                    <button class="text-slate-600 cursor-default w-[32px] rounded h-[32px] flex justify-center items-center hover:bg-neutral-200 delete-btn"><img src="close.svg"></button>
+                `;
+
+                todoList.appendChild(todoItem);
+                todoInput.value = '';
+
+                const checkbox = todoItem.querySelector('input[type="checkbox"]');
+                const todoText = todoItem.querySelector('.todo-text');
+                
+                checkbox.addEventListener('change', () => {
+                    todoText.classList.toggle('line-through');
+                    todoText.classList.toggle('opacity-50');
+                    todoItem.classList.toggle('bg-green-50');
+                });
+
+                const deleteBtn = todoItem.querySelector('.delete-btn');
+                deleteBtn.addEventListener('click', () => {
+                    todoItem.remove();
+                });
+            }
+        }
+
+        // Change event listener to form submit
+        document.getElementById('todoForm').addEventListener('submit', addTodo);
+
+        updateDisplay();
+        updateButtonStates(false);
+    </script>
+</body>
+</html>
